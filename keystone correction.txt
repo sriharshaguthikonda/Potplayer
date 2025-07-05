@@ -1,0 +1,43 @@
+// Simple Vertical Keystone Correction for PotPlayer
+// Save as: SimpleVerticalKeystone.txt in PxShader folder
+// Easier to adjust than the advanced version
+// Slanted-Wall Perspective   (PotPlayer PxShader)
+// Save as: SlantWallVertical.txt   in the PxShader folder
+
+sampler s0 : register(s0);
+
+// ── tweak this ────────────────────────────────────────────────
+#define SLANT_STRENGTH  -0.05   // 0‒1  (≈0.3 mild, 0.6 strong, −ve = opposite tilt)
+// ──────────────────────────────────────────────────────────────
+
+float4 main(float2 tex : TEXCOORD0) : COLOR
+{
+    float2  uv = tex;
+    float   y  = uv.y;
+
+    /*  Perspective mapping:
+        y' = y / (1 + S·(1 - y))
+        ·  compresses rows as they “recede” (when S > 0)
+        ·  keeps y = 0 and y = 1 fixed
+    */
+    float   denom      = 1.0 + SLANT_STRENGTH * (1.0 - y);
+    float   correctedY = y / denom;
+
+    correctedY = clamp(correctedY, 0.0, 1.0);
+
+    float4 colour = tex2D(s0, float2(uv.x, correctedY));
+
+    // gentle edge-fade to mask any clipping artefacts
+    float   fade = smoothstep(0.0, 0.03, correctedY) *
+                   smoothstep(1.0, 0.97, correctedY);
+
+    return colour * fade;
+}
+
+// HOW TO USE:
+// 1. Start with KEYSTONE_STRENGTH = 0.3
+// 2. If you need MORE correction (more compression at top, more expansion at bottom): 
+//    INCREASE the value (try 0.5, 0.7, 0.9)
+// 3. If you need LESS correction: 
+//    DECREASE the value (try 0.2, 0.1)
+// 4. Negative values will do the opposite effect (expand top, compress bottom)
